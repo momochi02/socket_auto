@@ -18,8 +18,7 @@ def start_client():
         "x": 100,
         "y": 200
     }
-    message = json.dumps(command)
-    client_socket.send(message.encode())
+    client_socket.send(json.dumps(command).encode())
     print(f"📤 Gửi lệnh: {command}")
 
 
