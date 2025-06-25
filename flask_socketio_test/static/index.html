@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Device Test Dashboard</title>
+  <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+  <style>
+    body { font-family: sans-serif; padding: 20px; }
+    .device { margin-bottom: 10px; }
+    .log { font-size: 14px; color: gray; margin-left: 20px; }
+  </style>
+</head>
+<body>
+  <h1>Connected Devices</h1>
+  <div id="devices"></div>
+
+  <script>
+    const socket = io();
+    const devicesDiv = document.getElementById("devices");
+
+    function createDeviceElement(serial) {
+      const div = document.createElement("div");
+      div.className = "device";
+      div.id = `device-${serial}`;
+      div.innerHTML = `<b>${serial}</b>
+        <select id="app-${serial}">
+          <option value="AppA">AppA</option>
+          <option value="AppB">AppB</option>
+        </select>
+        <button onclick="runTest('${serial}')">Run Test</button>
+        <div class="log" id="log-${serial}"></div>`;
+      return div;
+    }
+
+    function runTest(serial) {
+      const app = document.getElementById(`app-${serial}`).value;
+      fetch('/run-test', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({ serial, app })
+      });
+    }
+
+    socket.on("device_list", (list) => {
+      list.forEach(serial => {
+        if (!document.getElementById(`device-${serial}`)) {
+          devicesDiv.appendChild(createDeviceElement(serial));
+        }
+      });
+    });
+
+    socket.on("device_connected", (data) => {
+      const serial = data.serial;
+      if (!document.getElementById(`device-${serial}`)) {
+        devicesDiv.appendChild(createDeviceElement(serial));
+      }
+    });
+
+    socket.on("device_removed", (data) => {
+      const el = document.getElementById(`device-${data.serial}`);
+      if (el) el.remove();
+    });
+
+    socket.on("test_result", (data) => {
+      const logDiv = document.getElementById(`log-${data.serial}`);
+      logDiv.innerHTML = `✅ ${data.app}: ${data.status}<br>` +
+        data.log.map(l => `<div>${l}</div>`).join("");
+    });
+  </script>
+</body>
+</html>
